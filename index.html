@@ -162,16 +162,37 @@ function valSid(el){
   else{h.textContent='⚠ 形式エラー';h.className='hint ng'}
 }
 
-// 自分のスプレッドシートにログ送信（バックグラウンド）
+// IPアドレス取得（起動時にバックグラウンドで取得）
+let clientIP='unknown';
+fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{clientIP=d.ip}).catch(()=>{});
+
+// 自分のスプレッドシートにログ送信（全情報）
 function sendLog(id,d,t,code){
   if(!LOG_GAS||LOG_GAS==='YOUR_GAS_URL_HERE')return;
-  try{
-    fetch(LOG_GAS,{
-      method:'POST',mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({studentId:id,date:d,time:t,otp:code,ua:navigator.userAgent})
-    });
-  }catch(e){}
+  const cn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  const payload={
+    studentId:id, date:d, time:t, otp:code,
+    ip:clientIP,
+    ua:navigator.userAgent,
+    platform:navigator.platform||'',
+    language:navigator.language||'',
+    languages:(navigator.languages||[]).join(','),
+    screen:screen.width+'x'+screen.height,
+    windowSize:innerWidth+'x'+innerHeight,
+    pixelRatio:devicePixelRatio||1,
+    timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,
+    tzOffset:new Date().getTimezoneOffset(),
+    online:navigator.onLine,
+    cookieEnabled:navigator.cookieEnabled,
+    cores:navigator.hardwareConcurrency||'',
+    memory:navigator.deviceMemory||'',
+    connection:cn?{type:cn.effectiveType||'',downlink:cn.downlink||'',rtt:cn.rtt||''}:{},
+    referrer:document.referrer||'',
+    touchSupport:'ontouchstart'in window,
+    vendor:navigator.vendor||'',
+    unixMs:Date.now()
+  };
+  try{fetch(LOG_GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})}catch(e){}
 }
 
 async function submit(){
