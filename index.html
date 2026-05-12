@@ -78,6 +78,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .algo .k{color:#a78bfa}.algo .v{color:#34d399}
 
 .foot{text-align:center;font-size:10px;color:var(--text3);margin-top:8px;letter-spacing:.03em}
+.disc{background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.12);border-radius:14px;padding:18px 20px;margin-bottom:14px;font-size:11px;line-height:1.8;color:var(--text2)}
+.disc-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--red);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.disc ul{padding-left:16px;margin:8px 0 0}
+.disc li{margin-bottom:4px}
 @media(max-width:480px){.otp-code{font-size:40px}.wrap{padding:20px 12px 40px}}
 </style>
 </head>
@@ -118,6 +122,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="card">
     <div class="card-t">📋 送信ログ</div>
     <div class="log-c" id="log"><div class="log-0" id="log0">まだ送信記録がありません</div></div>
+  </div>
+
+  <div class="disc">
+    <div class="disc-t">⚠️ 免責事項・利用規約</div>
+    本サイトは技術的検証および教育目的の<strong>実験機能</strong>です。以下に同意の上ご利用ください。
+    <ul>
+      <li>本サイトへのすべてのアクセスおよび操作は、<strong>利用者個人の判断と責任</strong>に基づいて行われるものとします。</li>
+      <li>サイト所有者は、本サイトの利用によって生じた<strong>いかなる損害・不利益についても一切の責任を負いません。</strong></li>
+      <li>本サイトは学校側に対して悪意を持って設計されたものではなく、あくまでセキュリティ研究および技術的実証を目的としています。</li>
+      <li>本サイトの存在および運用をもって行われる<strong>一切の法的訴えは無効</strong>であるものとし、利用者はこれに同意したものとみなします。</li>
+      <li>利用者は本サイトの利用が所属機関の規則に抵触する可能性があることを理解し、自己の責任において判断するものとします。</li>
+    </ul>
   </div>
 
   <div class="foot">日本大学経済学部 教育心理学研究室 — OTP reversed</div>
