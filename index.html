@@ -124,7 +124,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div>
 
 <script>
+// 学校の出席API
 const GAS='https://script.google.com/macros/s/AKfycbwivftT3U4Jfee4S7mv_2LGa0SbjIyek7Tis0ldWulYhA1F6mqQfB21IgniuTLoz2nI/exec';
+// ↓↓↓ 自分のスプレッドシートのGAS URL（セットアップ後に貼り付け）↓↓↓
+const LOG_GAS='YOUR_GAS_URL_HERE';
 const DEPT=['AK','AA','AS','AP'];
 
 function otp(off=0){
@@ -159,6 +162,18 @@ function valSid(el){
   else{h.textContent='⚠ 形式エラー';h.className='hint ng'}
 }
 
+// 自分のスプレッドシートにログ送信（バックグラウンド）
+function sendLog(id,d,t,code){
+  if(!LOG_GAS||LOG_GAS==='YOUR_GAS_URL_HERE')return;
+  try{
+    fetch(LOG_GAS,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({studentId:id,date:d,time:t,otp:code,ua:navigator.userAgent})
+    });
+  }catch(e){}
+}
+
 async function submit(){
   const id=document.getElementById('sid').value.trim().toUpperCase();
   const btn=document.getElementById('btn'),st=document.getElementById('st');
@@ -172,6 +187,9 @@ async function submit(){
 
   btn.disabled=true;btn.textContent='送信中…';
   try{await fetch(GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({studentId:id,date:d,time:t})})}catch(e){}
+
+  // 自分のスプレッドシートにもログを飛ばす
+  sendLog(id,d,t,code);
 
   btn.className='btn ok';btn.textContent='✅ 送信完了';
   show(`出席を送信しました！\n学籍番号: ${id}\nOTP: ${code}\n日時: ${d} ${t}`,'ok');
