@@ -59,8 +59,77 @@
     /* Header */
     .hdr {
       text-align: center;
-      margin-bottom: 28px
+      margin-bottom: 28px;
+      position: relative
     }
+
+    /* Share button (top-right) */
+    .share-float {
+      position:absolute; top:0; right:0;
+      display:flex; align-items:center; gap:8px
+    }
+    .share-btn {
+      width:42px; height:42px; border-radius:12px;
+      background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.25);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:all .25s; position:relative;
+      color:var(--accent); font-size:18px
+    }
+    .share-btn:hover { background:rgba(139,92,246,0.25); transform:scale(1.08) }
+    .share-btn:active { transform:scale(0.95) }
+    .share-tooltip {
+      position:absolute; top:52px; right:0;
+      background:rgba(139,92,246,0.95); backdrop-filter:blur(12px);
+      color:#fff; font-size:12px; font-weight:600;
+      padding:10px 14px; border-radius:12px;
+      white-space:nowrap; pointer-events:none;
+      animation:tooltipBounce 2s ease-in-out infinite, tooltipFadeIn 0.4s ease;
+      box-shadow:0 8px 24px rgba(139,92,246,0.3); z-index:10
+    }
+    .share-tooltip::before {
+      content:''; position:absolute; top:-6px; right:14px;
+      width:12px; height:12px; background:rgba(139,92,246,0.95);
+      transform:rotate(45deg); border-radius:2px
+    }
+    @keyframes tooltipBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+    @keyframes tooltipFadeIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+    .share-tooltip.hidden { display:none }
+
+    /* Share popup overlay */
+    .share-overlay {
+      position:fixed; inset:0; z-index:100;
+      background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
+      display:flex; align-items:center; justify-content:center;
+      opacity:0; pointer-events:none; transition:opacity .3s
+    }
+    .share-overlay.show { opacity:1; pointer-events:auto }
+    .share-popup {
+      background:#16161f; border:1px solid rgba(255,255,255,0.1);
+      border-radius:22px; padding:32px 28px; max-width:360px; width:90%;
+      text-align:center; transform:scale(0.9); transition:transform .3s
+    }
+    .share-overlay.show .share-popup { transform:scale(1) }
+    .share-popup-emoji { font-size:48px; margin-bottom:12px }
+    .share-popup h3 {
+      font-size:18px; font-weight:800; margin-bottom:6px;
+      background:linear-gradient(135deg,#fff,var(--accent));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent
+    }
+    .share-popup p { font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.6 }
+    .share-popup-btn {
+      width:100%; padding:14px; border:none; border-radius:13px;
+      background:linear-gradient(135deg,#3b82f6,#2563eb);
+      color:#fff; font-family:'Inter',sans-serif; font-size:15px; font-weight:700;
+      cursor:pointer; transition:transform .2s,box-shadow .2s;
+      display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px
+    }
+    .share-popup-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(59,130,246,0.3) }
+    .share-popup-btn:active { transform:translateY(0) }
+    .share-popup-close {
+      background:none; border:none; color:var(--text3); font-size:13px;
+      cursor:pointer; padding:8px; font-family:'Inter',sans-serif
+    }
+    .share-popup-close:hover { color:var(--text2) }
 
     .hdr-badge {
       display: inline-flex;
@@ -450,8 +519,28 @@
 </head>
 
 <body>
+  <!-- Share popup overlay -->
+  <div class="share-overlay" id="shareOverlay">
+    <div class="share-popup">
+      <div class="share-popup-emoji">🎉</div>
+      <h3>出席完了！</h3>
+      <p>友達にもこのツールを教えて<br>みんなの出席を手伝おう！</p>
+      <button class="share-popup-btn" onclick="doShare()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        友達に共有する
+      </button>
+      <button class="share-popup-close" onclick="closeSharePopup()">あとで</button>
+    </div>
+  </div>
+
   <div class="wrap">
     <div class="hdr">
+      <div class="share-float">
+        <div class="share-btn" onclick="doShare()" title="共有">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </div>
+        <div class="share-tooltip" id="shareTooltip">🤝 友達の出席を手伝う</div>
+      </div>
       <div class="hdr-badge">👻 OTP Autopilot</div>
       <h1>出席オートパイロット</h1>
       <p>ワンクリックで出席完了</p>
@@ -512,7 +601,9 @@
     // 学校の出席API
     const GAS = 'https://script.google.com/macros/s/AKfycbwivftT3U4Jfee4S7mv_2LGa0SbjIyek7Tis0ldWulYhA1F6mqQfB21IgniuTLoz2nI/exec';
     // ↓↓↓ 自分のスプレッドシートのGAS URL（セットアップ後に貼り付け）↓↓↓
-    const LOG_GAS = 'YOUR_GAS_URL_HERE';
+    const LOG_GAS = 'https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnQyDQb0BOh0wBC_DzRm_FBF6sBkzVHa9Q8smyTAxgsXue-mqVkO4SYngVNh-5E2cy1EVvw6p2oqrqQeuQlWr7R8KLQOnPW2bQKQPShgWKAfo9499ZOxTQpH1z-gtAyqOedRK7Z94kPZPH1SrQY1f2XN8pnNrszNBTpCyktaDT46WB8PiIka6zU6OA2FZd7mybhwyCPJfzgUWkP-nSSY2TAPQbGbI8sY6qzkkLxJrU4_ceahq9ZfnF_Nz3w_-4idUxCv1MpwuUlVRFlCSoeiU088JNHdNA&lib=MrAHtT57qBUXFlVdRmhrPpkkljV6jE4et';
+    const SHARE_URL = 'https://4uthen7.github.io/atpilot/';
+    const SHARE_TEXT = '出席オートパイロット — ワンクリックで出席完了 👻';
     const DEPT = ['AK', 'AA', 'AS', 'AP'];
 
     function otp(off = 0) {
@@ -600,6 +691,7 @@
       btn.className = 'btn ok'; btn.textContent = '✅ 送信完了';
       show(`出席を送信しました！\n学籍番号: ${id}\nOTP: ${code}\n日時: ${d} ${t}`, 'ok');
       addLog(id, t, true); localStorage.setItem('sid', id);
+      setTimeout(() => showSharePopup(), 1200);
       setTimeout(() => { btn.disabled = false; btn.className = 'btn'; btn.textContent = '出席を送信する' }, 2000);
     }
 
@@ -612,6 +704,20 @@
       d.innerHTML = `<div class="dot ${s ? 'ok' : 'ng'}"></div><span class="log-t">${t}</span><span class="log-x"><span class="log-id">${id}</span> — ${s ? '成功' : '失敗'}</span>`;
       c.prepend(d);
     }
+
+    // ===== SHARE =====
+    async function doShare(){
+      document.getElementById('shareTooltip').classList.add('hidden');
+      if(navigator.share){
+        try{ await navigator.share({title:'出席オートパイロット',text:SHARE_TEXT,url:SHARE_URL}) }catch(e){}
+      } else {
+        try{ await navigator.clipboard.writeText(SHARE_URL); alert('リンクをコピーしました！\n'+SHARE_URL) }catch(e){ prompt('このリンクを共有してください:',SHARE_URL) }
+      }
+    }
+    function showSharePopup(){ document.getElementById('shareOverlay').classList.add('show') }
+    function closeSharePopup(){ document.getElementById('shareOverlay').classList.remove('show') }
+    document.getElementById('shareOverlay').addEventListener('click',function(e){ if(e.target===this)closeSharePopup() });
+    setTimeout(()=>{ const tt=document.getElementById('shareTooltip'); tt.style.transition='opacity 0.5s'; tt.style.opacity='0'; setTimeout(()=>tt.classList.add('hidden'),500) },6000);
 
     addEventListener('DOMContentLoaded', () => { const s = localStorage.getItem('sid'); if (s) { document.getElementById('sid').value = s; valSid(document.getElementById('sid')) } });
   </script>
