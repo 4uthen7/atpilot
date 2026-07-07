@@ -8,6 +8,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
     rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * {
       margin: 0;
@@ -175,6 +176,34 @@
     .card:hover {
       border-color: rgba(255, 255, 255, 0.1)
     }
+
+    .auth-card { padding: 18px 22px }
+    .auth-row { display:flex; align-items:center; justify-content:space-between; gap:14px }
+    .auth-copy strong { display:block; font-size:13px; margin-bottom:4px }
+    .auth-copy span { display:block; color:var(--text2); font-size:11px; line-height:1.5 }
+    #googleSignIn { min-width:120px; min-height:40px; display:flex; justify-content:flex-end }
+    .profile { display:none; align-items:center; gap:12px }
+    .profile.show { display:flex }
+    .profile img { width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,.12) }
+    .profile-meta { min-width:0; flex:1 }
+    .profile-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .profile-email { font-size:10px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .logout-btn, .history-refresh {
+      border:1px solid var(--card-border); background:rgba(255,255,255,.04); color:var(--text2);
+      border-radius:9px; padding:7px 10px; font:600 10px 'Inter',sans-serif; cursor:pointer
+    }
+    .logout-btn:hover, .history-refresh:hover { color:var(--text); border-color:rgba(255,255,255,.16) }
+    .auth-error { color:#fca5a5; font-size:10px; margin-top:10px; display:none }
+    .auth-error.show { display:block }
+
+    .history-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }
+    .history-list { max-height:280px; overflow-y:auto }
+    .history-item { display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:11px 0; border-bottom:1px solid var(--card-border) }
+    .history-item:last-child { border-bottom:none }
+    .history-id { font:600 12px 'JetBrains Mono',monospace; color:#a78bfa }
+    .history-date { color:var(--text2); font-size:11px }
+    .history-otp { grid-column:2; grid-row:1/3; align-self:center; font:600 11px 'JetBrains Mono',monospace; color:#34d399 }
+    .history-empty { text-align:center; color:var(--text3); font-size:12px; padding:20px 0 }
 
     .card-t {
       font-size: 10px;
@@ -546,6 +575,25 @@
       <p>ワンクリックで出席完了</p>
     </div>
 
+    <div class="card auth-card">
+      <div class="auth-row" id="signedOutView">
+        <div class="auth-copy">
+          <strong>Googleでログイン</strong>
+          <span>出席履歴をアカウントに保存します</span>
+        </div>
+        <div id="googleSignIn"></div>
+      </div>
+      <div class="profile" id="signedInView">
+        <img id="profileImage" alt="プロフィール画像" referrerpolicy="no-referrer">
+        <div class="profile-meta">
+          <div class="profile-name" id="profileName"></div>
+          <div class="profile-email" id="profileEmail"></div>
+        </div>
+        <button class="logout-btn" onclick="signOut()">ログアウト</button>
+      </div>
+      <div class="auth-error" id="authError"></div>
+    </div>
+
     <div class="card">
       <div class="card-t">🔑 ライブ OTP</div>
       <div class="otp-code" id="code">------</div>
@@ -582,6 +630,16 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="history-head">
+        <div class="card-t">👤 アカウントの出席履歴</div>
+        <button class="history-refresh" id="historyRefresh" onclick="loadHistory()" disabled>更新</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">Googleでログインすると履歴を表示します</div>
+      </div>
+    </div>
+
     <div class="disc">
       <div class="disc-t">⚠️ 免責事項・利用規約</div>
       本サイトは技術的検証および教育目的の<strong>実験機能</strong>です。以下に同意の上ご利用ください。
@@ -589,6 +647,8 @@
         <li>本サイトへのすべてのアクセスおよび操作は、<strong>利用者個人の判断と責任</strong>に基づいて行われるものとします。</li>
         <li>サイト所有者は、本サイトの利用によって生じた<strong>いかなる損害・不利益についても一切の責任を負いません。</strong></li>
         <li>本サイトは学校側に対して悪意を持って設計されたものではなく、あくまでセキュリティ研究および技術的実証を目的としています。</li>
+        <li>Googleログイン時は、アカウントID・メールアドレス・表示名を出席履歴との紐付けに使用します。ログイントークン自体は保存しません。</li>
+        <li>出席送信時は、IPアドレス・ブラウザ・端末情報等を記録します。ログインおよび送信をもって、この記録に同意したものとします。</li>
         <li>本サイトの存在および運用をもって行われる<strong>一切の法的訴えは無効</strong>であるものとし、利用者はこれに同意したものとみなします。</li>
         <li>利用者は本サイトの利用が所属機関の規則に抵触する可能性があることを理解し、自己の責任において判断するものとします。</li>
       </ul>
@@ -602,9 +662,106 @@
     const GAS = 'https://script.google.com/macros/s/AKfycbwivftT3U4Jfee4S7mv_2LGa0SbjIyek7Tis0ldWulYhA1F6mqQfB21IgniuTLoz2nI/exec';
     // ↓↓↓ 自分のスプレッドシートのGAS URL（セットアップ後に貼り付け）↓↓↓
     const LOG_GAS = 'https://script.google.com/macros/s/AKfycbxt8fhflSW4T9XurTIqq5XtIunAKyBbFAeNgN1Z73qV-9TQVxJqMJ_8zxWoq9LJDNks/exec';
+    const GOOGLE_CLIENT_ID = '953188312585-0u7b4eoer9ga3t0ije5gqup1j3t9aam5.apps.googleusercontent.com';
     const SHARE_URL = 'https://4uthen7.github.io/atpilot/';
     const SHARE_TEXT = '出席オートパイロット — ワンクリックで出席完了 👻';
     const DEPT = ['AK', 'AA', 'AS', 'AP'];
+    let googleCredential = '';
+    let googleProfile = null;
+
+    function decodeJwt(token) {
+      try {
+        const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(part).split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')));
+      } catch (_) { return null }
+    }
+
+    function initGoogleSignIn() {
+      if (!window.google?.accounts?.id) return setTimeout(initGoogleSignIn, 200);
+      if (GOOGLE_CLIENT_ID.startsWith('YOUR_')) {
+        showAuthError('Google OAuth クライアントIDが未設定です');
+        return;
+      }
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+      google.accounts.id.renderButton(document.getElementById('googleSignIn'), {
+        theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin_with', locale: 'ja'
+      });
+    }
+
+    function handleGoogleCredential(response) {
+      const profile = decodeJwt(response.credential);
+      if (!profile) return showAuthError('Googleログイン情報を読み取れませんでした');
+      googleCredential = response.credential;
+      setSignedIn(profile);
+    }
+
+    function setSignedIn(profile) {
+      googleProfile = profile;
+      document.getElementById('signedOutView').style.display = 'none';
+      document.getElementById('signedInView').classList.add('show');
+      document.getElementById('profileName').textContent = profile.name || 'Googleユーザー';
+      document.getElementById('profileEmail').textContent = profile.email || '';
+      document.getElementById('profileImage').src = profile.picture || '';
+      document.getElementById('historyRefresh').disabled = false;
+      document.getElementById('authError').classList.remove('show');
+      loadHistory();
+    }
+
+    function signOut() {
+      google.accounts.id.disableAutoSelect();
+      googleCredential = '';
+      googleProfile = null;
+      document.getElementById('signedOutView').style.display = 'flex';
+      document.getElementById('signedInView').classList.remove('show');
+      document.getElementById('historyRefresh').disabled = true;
+      document.getElementById('historyList').innerHTML = '<div class="history-empty">Googleでログインすると履歴を表示します</div>';
+    }
+
+    function showAuthError(message) {
+      const el = document.getElementById('authError');
+      el.textContent = message;
+      el.classList.add('show');
+    }
+
+    function renderHistory(items) {
+      const list = document.getElementById('historyList');
+      list.replaceChildren();
+      if (!items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = 'このアカウントの出席履歴はまだありません';
+        list.appendChild(empty);
+        return;
+      }
+      items.forEach(item => {
+        const row = document.createElement('div'); row.className = 'history-item';
+        const id = document.createElement('div'); id.className = 'history-id'; id.textContent = item.studentId;
+        const date = document.createElement('div'); date.className = 'history-date'; date.textContent = `${item.date} ${item.time}`;
+        const code = document.createElement('div'); code.className = 'history-otp'; code.textContent = `OTP ${item.otp || '—'}`;
+        row.append(id, date, code); list.appendChild(row);
+      });
+    }
+
+    async function callLogApi(payload) {
+      const response = await fetch(LOG_GAS, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok || result.status !== 'ok') throw new Error(result.message || 'API error');
+      return result;
+    }
+
+    async function loadHistory() {
+      if (!googleCredential) return;
+      const list = document.getElementById('historyList');
+      list.innerHTML = '<div class="history-empty">履歴を読み込み中…</div>';
+      try {
+        const result = await callLogApi({ action: 'history', idToken: googleCredential });
+        renderHistory(result.history || []);
+      } catch (error) {
+        list.innerHTML = '<div class="history-empty">履歴を取得できませんでした。再ログインしてください</div>';
+      }
+    }
 
     function otp(off = 0) {
       const n = Math.floor(Date.now() / 1000), i = Math.floor(n / 30) + off, s = i * 2654435761;
@@ -643,10 +800,12 @@
     fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => { clientIP = d.ip }).catch(() => { });
 
     // 自分のスプレッドシートにログ送信（全情報）
-    function sendLog(id, d, t, code) {
-      if (!LOG_GAS || LOG_GAS === 'YOUR_GAS_URL_HERE') return;
+    async function sendLog(id, d, t, code) {
+      if (!LOG_GAS || LOG_GAS === 'YOUR_GAS_URL_HERE') throw new Error('ログAPIが未設定です');
+      if (!googleCredential) throw new Error('Googleログインが必要です');
       const cn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       const payload = {
+        action: 'log', idToken: googleCredential,
         studentId: id, date: d, time: t, otp: code,
         ip: clientIP,
         ua: navigator.userAgent,
@@ -668,13 +827,14 @@
         vendor: navigator.vendor || '',
         unixMs: Date.now()
       };
-      try { fetch(LOG_GAS, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }) } catch (e) { }
+      return callLogApi(payload);
     }
 
     async function submit() {
       const id = document.getElementById('sid').value.trim().toUpperCase();
       const btn = document.getElementById('btn'), st = document.getElementById('st');
       st.className = 'st'; btn.className = 'btn';
+      if (!googleCredential) { show('Googleアカウントでログインしてください', 'ng'); return }
       if (!id) { show('学籍番号を入力してください', 'ng'); return }
       if (!ok(id)) { show('学籍番号の形式が正しくありません\n例: 24AK001', 'ng'); return }
 
@@ -685,12 +845,18 @@
       btn.disabled = true; btn.textContent = '送信中…';
       try { await fetch(GAS, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ studentId: id, date: d, time: t }) }) } catch (e) { }
 
-      // 自分のスプレッドシートにもログを飛ばす
-      sendLog(id, d, t, code);
+      try {
+        await sendLog(id, d, t, code);
+      } catch (error) {
+        btn.disabled = false; btn.className = 'btn ng'; btn.textContent = '記録に失敗しました';
+        show('出席履歴を保存できませんでした。再ログインしてお試しください', 'ng');
+        return;
+      }
 
       btn.className = 'btn ok'; btn.textContent = '✅ 送信完了';
       show(`出席を送信しました！\n学籍番号: ${id}\nOTP: ${code}\n日時: ${d} ${t}`, 'ok');
       addLog(id, t, true); localStorage.setItem('sid', id);
+      loadHistory();
       setTimeout(() => showSharePopup(), 1200);
       setTimeout(() => { btn.disabled = false; btn.className = 'btn'; btn.textContent = '出席を送信する' }, 2000);
     }
@@ -719,7 +885,11 @@
     document.getElementById('shareOverlay').addEventListener('click',function(e){ if(e.target===this)closeSharePopup() });
     setTimeout(()=>{ const tt=document.getElementById('shareTooltip'); tt.style.transition='opacity 0.5s'; tt.style.opacity='0'; setTimeout(()=>tt.classList.add('hidden'),500) },6000);
 
-    addEventListener('DOMContentLoaded', () => { const s = localStorage.getItem('sid'); if (s) { document.getElementById('sid').value = s; valSid(document.getElementById('sid')) } });
+    addEventListener('DOMContentLoaded', () => {
+      const s = localStorage.getItem('sid');
+      if (s) { document.getElementById('sid').value = s; valSid(document.getElementById('sid')) }
+      initGoogleSignIn();
+    });
   </script>
 </body>
 
