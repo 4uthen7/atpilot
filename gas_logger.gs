@@ -11,24 +11,34 @@
  * 5. 表示されたURLをコピーして index.html の LOG_GAS_URL に設定
  */
 
+const SPREADSHEET_ID = '18-6y_MSpZbXqiYHgpHHk-TDacfy_skm_tG6h-IxaADk';
+const SHEET_NAME = '出席ログ';
+const HEADERS = [
+  'タイムスタンプ', '学籍番号', '日付', '時刻', 'OTP',
+  'IPアドレス', 'User-Agent', 'プラットフォーム',
+  '言語', '全言語', '画面解像度', 'ウィンドウサイズ',
+  'ピクセル比', 'タイムゾーン', 'TZオフセット',
+  'オンライン', 'Cookie有効', 'CPUコア数', 'メモリ(GB)',
+  '接続種別', '下り速度', 'RTT',
+  'リファラー', 'タッチ対応', 'ベンダー', 'Unix(ms)'
+];
+
 function doPost(e) {
+  const lock = LockService.getScriptLock();
   try {
+    lock.waitLock(10000);
     const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName('出席ログ');
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName(SHEET_NAME);
 
     if (!sheet) {
-      sheet = ss.insertSheet('出席ログ');
-      sheet.appendRow([
-        'タイムスタンプ', '学籍番号', '日付', '時刻', 'OTP',
-        'IPアドレス', 'User-Agent', 'プラットフォーム',
-        '言語', '全言語', '画面解像度', 'ウィンドウサイズ',
-        'ピクセル比', 'タイムゾーン', 'TZオフセット',
-        'オンライン', 'Cookie有効', 'CPUコア数', 'メモリ(GB)',
-        '接続種別', '下り速度', 'RTT',
-        'リファラー', 'タッチ対応', 'ベンダー', 'Unix(ms)'
-      ]);
-      sheet.getRange(1, 1, 1, 26).setFontWeight('bold');
+      sheet = ss.insertSheet(SHEET_NAME);
+    }
+    if (sheet.getLastRow() === 0) {
+      sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+      sheet.getRange(1, 1, 1, HEADERS.length)
+        .setFontWeight('bold')
+        .setBackground('#d9ead3');
       sheet.setFrozenRows(1);
     }
 
@@ -69,6 +79,8 @@ function doPost(e) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    if (lock.hasLock()) lock.releaseLock();
   }
 }
 
