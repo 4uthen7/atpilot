@@ -759,7 +759,11 @@
         const result = await callLogApi({ action: 'history', idToken: googleCredential });
         renderHistory(result.history || []);
       } catch (error) {
-        list.innerHTML = '<div class="history-empty">履歴を取得できませんでした。再ログインしてください</div>';
+        console.error('履歴取得エラー:', error);
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = `履歴を取得できませんでした: ${error.message}`;
+        list.replaceChildren(empty);
       }
     }
 
