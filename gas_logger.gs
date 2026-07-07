@@ -158,6 +158,13 @@ function jsonResponse_(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// 初回セットアップ時にエディタから1度だけ実行し、
+// UrlFetchApp と SpreadsheetApp の権限を承認する。トリガー設定は不要。
+function authorizeServices() {
+  UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo', { muteHttpExceptions: true });
+  SpreadsheetApp.openById(SPREADSHEET_ID).getName();
+}
+
 function doGet(e) {
   return ContentService
     .createTextOutput('出席ログAPI is running')
